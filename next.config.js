@@ -15,6 +15,12 @@ module.exports = {
         port: '',
         pathname: '/files/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'cdn.britannica.com',
+        port: '',
+        pathname: '/45/**',
+      },
     ],
   },
   experimental: {

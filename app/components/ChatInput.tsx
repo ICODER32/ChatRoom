@@ -3,10 +3,13 @@
 import { FormEvent, useState } from "react";
 import { v4 as uuid } from "uuid";
 import { Message } from "../../typings";
+import useSWR from "swr";
+import { fetcher } from "../../utils/fetchMessages";
 
 const ChatInput = () => {
   const [input, setInput] = useState("");
-  const addMessage = (e: FormEvent<HTMLFormElement>) => {
+  const { data: messages, error, mutate } = useSWR("/api/getMessages", fetcher);
+  const addMessage = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!input) return;
     const messageToBeSended = input;
@@ -21,23 +24,25 @@ const ChatInput = () => {
       email: "ibtisamanwar32@gmail.com",
     };
     const uploadMessageToDb = async () => {
-      const response = await fetch("/api/addMessage", {
+      const data = await fetch("/api/addMessage", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ message }),
-      });
-      const data = await response.json();
-      console.log("Message Added>>>", data);
+      }).then((res) => res.json());
+      return [data.message, ...messages!];
     };
-    uploadMessageToDb();
     setInput("");
+    await mutate(uploadMessageToDb, {
+      optimisticData: [message, ...messages!],
+      rollbackOnError: true,
+    });
   };
   return (
     <form
       onSubmit={addMessage}
-      className="fixed bottom-0 w-full flex lg:px-10 lg:py-5 md:px-1 md:py-1"
+      className="fixed bottom-0 w-full flex lg:px-10 lg:py-5 md:px-1 md:py-1 bg-white"
     >
       <input
         className="rounded flex-1 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent px-5 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
