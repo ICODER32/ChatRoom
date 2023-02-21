@@ -5,28 +5,39 @@ import { clientPusher } from "../../pusher";
 import { Message } from "../../typings";
 import { fetcher } from "../../utils/fetchMessages";
 import MessageBubble from "./MessageBubble";
-const MessageList = () => {
-  const { data: messages, error, mutate } = useSWR("/api/getMessages", fetcher);
+
+type Props = {
+  initialMessages: Message[];
+};
+
+const MessageList = ({ initialMessages }: Props) => {
+  const {
+    data: messages,
+    error,
+    mutate,
+  } = useSWR<Message[]>("/api/getMessages", fetcher);
+
   useEffect(() => {
-    const channel = clientPusher.subscribe("message");
+    const channel = clientPusher.subscribe("messages");
     channel.bind("new-message", async (data: Message) => {
       if (messages?.find((message) => message.id === data.id)) return;
       if (!messages) {
-        return mutate(fetcher);
+        mutate(fetcher);
+      } else {
+        mutate(fetcher, {
+          optimisticData: [data, ...messages!],
+          rollbackOnError: true,
+        });
       }
-      mutate(fetcher, {
-        optimisticData: [data, ...messages!],
-        rollbackOnError: true,
-      });
     });
     return () => {
-      channel.unbind();
+      channel.unbind_all();
       channel.unsubscribe();
     };
   }, [messages, mutate, clientPusher]);
   return (
     <div className="space-y-5 px-5 pt-8 mb-32">
-      {messages?.map((message) => (
+      {(initialMessages || messages)?.map((message) => (
         <MessageBubble key={message.id} message={message} />
       ))}
     </div>
